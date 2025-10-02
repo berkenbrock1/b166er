@@ -86,7 +86,6 @@
 
 #define PWM_MAX_VAR       15
 
-// *** ATUALIZE ESTAS PORTAS PARA O ARDUINO GIGA ***
 // Joint 1 & 2 pins
 #define PWM_1A            44
 #define PWM_1B            45
@@ -281,23 +280,16 @@ void setupJointPins() {
     pinMode(RELAY_3, OUTPUT);
     
     // Enable pins - outputs
-    int enablePins[] = {ENABLE_1, ENABLE_2A, ENABLE_2B, ENABLE_3, ENABLE_4, ENABLE_5, ENABLE_6};
-    for(int i = 0; i < 7; i++) {
+    int enablePins[] = {ENABLE_1F, ENABLE_1R, ENABLE_2F, ENABLE_2R, ENABLE_3F, ENABLE_3R, ENABLE_4F, ENABLE_4R, ENABLE_5F, ENABLE_5R, ENABLE_6F, ENABLE_6R};
+    for(int i = 0; i < 12; i++) {
         pinMode(enablePins[i], OUTPUT);
         digitalWrite(enablePins[i], HIGH);
     }
     
-    // H-bridge pins - outputs
-    int hbridgePins[] = {HBRIDGE_1A, HBRIDGE_1B, HBRIDGE_2A, HBRIDGE_2B,
-                        HBRIDGE_3A, HBRIDGE_3B, HBRIDGE_4A, HBRIDGE_4B,
-                        HBRIDGE_5A, HBRIDGE_5B, HBRIDGE_6A, HBRIDGE_6B};
-    for(int i = 0; i < 12; i++) {
-        pinMode(hbridgePins[i], OUTPUT);
-    }
     
     // PWM pins - outputs
-    int pwmPins[] = {PWM_1, PWM_2A, PWM_2B, PWM_3, PWM_4, PWM_5, PWM_6};
-    for(int i = 0; i < 7; i++) {
+    int pwmPins[] = {PWM_1A, PWM_1B, PWM_2A, PWM_2B, PWM_3A, PWM_3B, PWM_4A, PWM_4B, PWM_5A, PWM_5B, PWM_6A, PWM_6B};
+    for(int i = 0; i < 12; i++) {
         pinMode(pwmPins[i], OUTPUT);
     }
 }
@@ -681,36 +673,188 @@ void GoHome() {
     }
 }
 
-// Home routines for each joint (simplified - you'll need to implement the full logic)
+// Home routines for each joint
 void homeJoint1() {
-    // Joint 1 home routine implementation
-    // ... (implement based on original code)
+    // Joint 1 goes to limit position, CCW. Stops when LS activates.
+    float reset_output_1 = 0;
+    bool LS_1Bstat = digitalRead(LS_1B);
+    while(!LS_1Bstat){
+        //Forces small changes in PWM.
+        if(reset_output_1 < PWM_MAX_1)
+            reset_output_1 = reset_output_1 + 1;
+        else
+            reset_output_1 = PWM_MAX_1;
+
+        delay(2);
+        motorGo(MOTOR_1, CCW, reset_output_1);
+        LS_1Bstat = digitalRead(LS_1B);
+        nh.spinOnce();
+    }
+    while(reset_output_1 > 0){
+        reset_output_1 = reset_output_1 - PWM_MAX_VAR;
+        delay(2);
+        motorGo(MOTOR_1, CCW, reset_output_1);
+    }
+    motorGo(MOTOR_1, STOP, 0);
+    
+    //Wait for 0.5 second.
+    unsigned long wait_time = millis();
+    while(millis() < wait_time + 500){
+        motorGo(MOTOR_1, STOP, 0);
+    }
+    
+    //After the LS activates, rotates CW until at home position (half of the workspace of joint 1).
+    joints[0].encoder_count = 0;
+    
+    while(joints[0].encoder_count > -joints[0].DEG2PUL*104){
+        //Forces small changes in PWM.
+        if(reset_output_1 < PWM_MAX_1)
+            reset_output_1 = reset_output_1 + 1;
+        else
+            reset_output_1 = PWM_MAX_1;
+
+        motorGo(MOTOR_1, CW, reset_output_1);
+        nh.spinOnce();
+    }
+    while(reset_output_1 > 0){
+        reset_output_1 = reset_output_1 - PWM_MAX_VAR;
+        delay(2);
+        motorGo(MOTOR_1, CW, reset_output_1);
+    }
+    motorGo(MOTOR_1, STOP, 0);
+
+    //Wait for 0.5 second.
+    wait_time = millis();
+    while(millis() < wait_time + 500){
+        motorGo(MOTOR_1, STOP, 0);
+    }
 }
 
 void homeJoint2() {
-    // Joint 2 home routine implementation  
-    // ... (implement based on original code)
+    // Joint 2 goes to home position, CCW. Stops when LS activates.
+    float reset_output_2 = 0;
+    if(joints[1].brake_flag){
+        brake_release(2);
+    }
+    bool LS_2Astat = digitalRead(LS_2A);
+    while(!LS_2Astat){
+        //Forces small changes in PWM.
+        if(reset_output_2 < 140)
+            reset_output_2 = reset_output_2 + 1;
+        else
+            reset_output_2 = 140;
+
+        delay(2);
+        motorGo(MOTOR_2, CCW, reset_output_2);
+        LS_2Astat = digitalRead(LS_2A);
+        nh.spinOnce();
+    }
+    while(reset_output_2 > 0){
+        reset_output_2 = reset_output_2 - 1;
+        delay(2);
+        motorGo(MOTOR_2, CCW, reset_output_2);
+    }
+    motorGo(MOTOR_2, STOP, 0);
+    brake_lock(2);
+
+    //Wait for 0.5 second.
+    unsigned long wait_time = millis();
+    while(millis() < wait_time + 500){
+        motorGo(MOTOR_2, STOP, 0);
+    }
 }
 
 void homeJoint3() {
-    // Joint 3 home routine implementation
-    // ... (implement based on original code)
+    // First, adjusts joint 4 to CCW limit to avoid possible self-collisions.
+    motorGo(MOTOR_4, CCW, PWM_MAX_4);
+    bool LS_4Astat = digitalRead(LS_4A);
+    while(!LS_4Astat){
+        LS_4Astat = digitalRead(LS_4A);
+        nh.spinOnce();
+    }
+    motorGo(MOTOR_4, STOP, 0);
+
+    //Wait for 1 second.
+    unsigned long wait_time = millis();
+    while(millis() < wait_time + 1000){
+        motorGo(MOTOR_4, STOP, 0);
+    }
+    
+    // Joint 3 goes to home position, CW. Stops when LS activates.
+    brake_release(3);
+    motorGo(MOTOR_3, CW, PWM_MAX_3_CW);
+    bool LS_3Bstat = digitalRead(LS_3B);
+    while(!LS_3Bstat){
+        LS_3Bstat = digitalRead(LS_3B);
+        nh.spinOnce();
+    }
+    motorGo(MOTOR_3, STOP, 0);
+    brake_lock(3);
+
+    //Wait for 0.5 second.
+    wait_time = millis();
+    while(millis() < wait_time + 500){
+        motorGo(MOTOR_4, STOP, 0);
+    }
 }
 
 void homeJoint4() {
-    // Joint 4 home routine implementation
-    // ... (implement based on original code)
+    // Joint 4 goes to home position, CW. Stops at 0 degree mark.
+    joints[3].encoder_count = 0;
+    while(abs(joints[3].encoder_count) < joints[3].DEG2PUL*95){
+        motorGo(MOTOR_4, CW, PWM_MAX_4);
+        nh.spinOnce();
+    }
+    motorGo(MOTOR_4, STOP, 0);
+
+    //Wait for 0.5 second.
+    unsigned long wait_time = millis();
+    while(millis() < wait_time + 500){
+        motorGo(MOTOR_4, STOP, 0);
+    }
 }
 
 void homeJoint5() {
-    // Joint 5 home routine implementation
-    // ... (implement based on original code)
+    // Joint 5 goes to limit position, CCW. Stops when LS activates.
+    motorGo(MOTOR_5, CCW, PWM_MAX);
+    bool LS_5Astat = digitalRead(LS_5A);
+    while(!LS_5Astat){
+        LS_5Astat = digitalRead(LS_5A);
+        nh.spinOnce();
+    }
+    motorGo(MOTOR_5, STOP, 0);
+
+    //Wait for 0.5 seconds.
+    unsigned long wait_time = millis();
+    while(millis() < wait_time + 500){
+        motorGo(MOTOR_5, STOP, 0);
+    }
+
+    // After the LS activates, rotates CW until at home position (zero degree, resulting in a flat grip).
+    joints[4].encoder_count = 0;
+    while(abs(joints[4].encoder_count) < joints[4].DEG2PUL*167){
+        motorGo(MOTOR_5, CW, PWM_MAX);
+        nh.spinOnce();
+    }
+    motorGo(MOTOR_5, STOP, 0);
+
+    //Wait for 0.5 seconds.
+    wait_time = millis();
+    while(millis() < wait_time + 500){
+        motorGo(MOTOR_5, STOP, 0);
+    }
 }
 
 void homeGrip() {
-    // Grip home routine implementation
-    // ... (implement based on original code)
+    // Closes the grip, activating the motor for 2 seconds.
+    unsigned long wait_time = millis();
+    while(millis() < wait_time + 2000){
+        motorGo(MOTOR_6, CLOSE, 255);
+        nh.spinOnce();
+    }
+    motorGo(MOTOR_6, STOP, 0);
 }
+
 
 void brake_lock(int joint) {
     if(joint == 2) {
