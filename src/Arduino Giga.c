@@ -904,29 +904,137 @@ static inline int8_t sign(int val) {
 }
 
 void motorGo(int motor, int dir, int pwm) {
-    // Implementation of motor control for all joints
-    // ... (implement based on original codes, combining all motor control logic)
-    
-    // This is a template - you'll need to implement the full switch cases
-    // for all 6 motors based on the original codes
-    switch(motor) {
-        case MOTOR_1:
-            // Joint 1 motor control
+    switch (motor) {
+        case MOTOR_1: {
+            // Joint 1 motor control (L298N H-bridge)
+            switch (dir) {
+                case CW: {
+                    analogWrite(PWM_1A, pwm);
+                    analogWrite(PWM_1B, 0);
+                    break;
+                }
+                case CCW: {
+                    analogWrite(PWM_1A, 0);
+                    analogWrite(PWM_1B, pwm);
+                    break;
+                }
+                case STOP: {
+                    analogWrite(PWM_1A, 0);
+                    analogWrite(PWM_1B, 0);
+                    break;
+                }
+            }
             break;
-        case MOTOR_2:
-            // Joint 2 motor control  
+        }
+
+        case MOTOR_2: {
+            // Joint 2 motor control (BTS7960 H-bridge)
+            switch (dir) {
+                case CW: {
+                    analogWrite(PWM_2A, 0);
+                    analogWrite(PWM_2B, pwm);
+                    break;
+                }
+                case CCW: {
+                    analogWrite(PWM_2A, pwm);
+                    analogWrite(PWM_2B, 0);
+                    break;
+                }
+                case STOP: {
+                    analogWrite(PWM_2A, 0);
+                    analogWrite(PWM_2B, 0);
+                    break;
+                }
+            }
             break;
-        case MOTOR_3:
-            // Joint 3 motor control
+        }
+
+        case MOTOR_3: {
+            // Joint 3 motor control (L298N H-bridge)
+            switch (dir) {
+                case CW: {
+                    analogWrite(PWM_3A, pwm);
+                    analogWrite(PWM_3B, 0);
+                    break;
+                }
+                case CCW: {
+                    analogWrite(PWM_3A, 0);
+                    analogWrite(PWM_3B, pwm);
+                    break;
+                }
+                case STOP: {
+                    analogWrite(PWM_3A, 0);
+                    analogWrite(PWM_3B, 0);
+                    break;
+                }
+            }
             break;
-        case MOTOR_4:
-            // Joint 4 motor control
+        }
+
+        case MOTOR_4: {
+            // Joint 4 motor control (L298N H-bridge)
+            switch (dir) {
+                case CW: {
+                    analogWrite(PWM_4A, pwm);
+                    analogWrite(PWM_4B, 0);
+                    break;
+                }
+                case CCW: {
+                    analogWrite(PWM_4A, 0);
+                    analogWrite(PWM_4B, pwm);
+                    break;
+                }
+                case STOP: {
+                    analogWrite(PWM_4A, 0);
+                    analogWrite(PWM_4B, 0);
+                    break;
+                }
+            }
             break;
-        case MOTOR_5:
-            // Joint 5 motor control
+        }
+
+        case MOTOR_5: {
+            // Joint 5 motor control (L298N H-bridge)
+            switch (dir) {
+                case CW: {
+                    analogWrite(PWM_5A, pwm);
+                    analogWrite(PWM_5B, 0);
+                    break;
+                }
+                case CCW: {
+                    analogWrite(PWM_5A, 0);
+                    analogWrite(PWM_5B, pwm);
+                    break;
+                }
+                case STOP: {
+                    analogWrite(PWM_5A, 0);
+                    analogWrite(PWM_5B, 0);
+                    break;
+                }
+            }
             break;
-        case MOTOR_6:
-            // Grip motor control
+        }
+
+        case MOTOR_6: {
+            // Grip motor control (L298N H-bridge)
+            switch (dir) {
+                case OPEN: {
+                    analogWrite(PWM_6A, pwm);
+                    analogWrite(PWM_6B, 0);
+                    break;
+                }
+                case CLOSE: {
+                    analogWrite(PWM_6A, 0);
+                    analogWrite(PWM_6B, pwm);
+                    break;
+                }
+                case STOP: {
+                    analogWrite(PWM_6A, 0);
+                    analogWrite(PWM_6B, 0);
+                    break;
+                }
+            }
             break;
+        }
     }
 }
